@@ -1,0 +1,31 @@
+# Maven build files
+target/
+!target/*.jar
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Git files
+.git/
+.gitignore
+
+# Local development files
+*.log
+*.env
+
+# Docker files
+Dockerfile
+docker-compose.yml
+
+# Frontend files (handled by frontend container)
+frontend/
+
+# Documentation
+docs/
+*.md
+
+# System files
+.DS_Store
+Thumbs.db

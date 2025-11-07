@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<layers>
+    <layer>
+        <name>dependencies</name>
+        <includes>
+            <include>BOOT-INF/lib/</include>
+        </includes>
+        <excludes>
+            <exclude>BOOT-INF/lib/*-SNAPSHOT.jar</exclude>
+        </excludes>
+    </layer>
+    <layer>
+        <name>spring-boot-loader</name>
+        <includes>
+            <include>org/springframework/boot/loader/**</include>
+        </includes>
+    </layer>
+    <layer>
+        <name>snapshot-dependencies</name>
+        <includes>
+            <include>BOOT-INF/lib/*-SNAPSHOT.jar</include>
+        </includes>
+    </layer>
+    <layer>
+        <name>application</name>
+        <includes>
+            <include>BOOT-INF/classes/**</include>
+            <include>META-INF/**</include>
+            <include>BOOT-INF/classpath.idx</include>
+            <include>BOOT-INF/layers.idx</include>
+        </includes>
+    </layer>
+</layers>
