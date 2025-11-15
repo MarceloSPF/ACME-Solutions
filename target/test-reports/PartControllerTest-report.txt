@@ -1,0 +1,52 @@
+================================================================================
+RELATÓRIO DE TESTES
+================================================================================
+Classe: PartControllerTest
+Gerado em: 15/11/2025 10:33:52
+--------------------------------------------------------------------------------
+RESUMO
+--------------------------------------------------------------------------------
+Total de Testes: 7
+Sucesso:         7
+Falhou:          0
+Abortado:        0
+Desabilitado:    0
+--------------------------------------------------------------------------------
+DETALHES DOS TESTES
+--------------------------------------------------------------------------------
+Método: shouldUpdatePart
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:33:52
+--------------------------------------------------------------------------------
+Método: shouldGetPartById
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:33:52
+--------------------------------------------------------------------------------
+Método: shouldUpdateStock
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:33:52
+--------------------------------------------------------------------------------
+Método: shouldCreatePart
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:33:52
+--------------------------------------------------------------------------------
+Método: shouldGetAllParts
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:33:52
+--------------------------------------------------------------------------------
+Método: shouldDeletePart
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:33:52
+--------------------------------------------------------------------------------
+Método: shouldGetPartByCode
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:33:52
+--------------------------------------------------------------------------------
+

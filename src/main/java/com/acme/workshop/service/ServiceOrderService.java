@@ -99,4 +99,13 @@ public class ServiceOrderService {
         serviceOrder.setTotalCost(totalCost);
         return serviceOrderRepository.save(serviceOrder);
     }
+
+    // Recalcula o custo total automaticamente baseado em itens e peças
+    public ServiceOrder recalculateTotalCost(Long id) {
+        ServiceOrder serviceOrder = serviceOrderRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Ordem de serviço não encontrada"));
+
+        serviceOrder.updateTotalCost();
+        return serviceOrderRepository.save(serviceOrder);
+    }
 }

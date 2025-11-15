@@ -50,13 +50,13 @@ public class WorkshopFacade {
         Technician technician = technicianService.findById(requestDTO.getTechnicianId())
             .orElseThrow(() -> new IllegalArgumentException("Técnico não encontrado"));
 
-        // Criar a ordem de serviço
+        // Criar a ordem de serviço (totalCost será calculado automaticamente quando itens/peças forem adicionados)
         ServiceOrder serviceOrder = new ServiceOrderBuilder()
             .withCustomer(customer)
             .withVehicle(vehicle)
             .withTechnician(technician)
             .withDescription(requestDTO.getDescription())
-            .withTotalCost(requestDTO.getTotalCost())
+            .withTotalCost(java.math.BigDecimal.ZERO) // Inicializa com zero, será calculado automaticamente
             .build();
 
         serviceOrder = serviceOrderService.save(serviceOrder);

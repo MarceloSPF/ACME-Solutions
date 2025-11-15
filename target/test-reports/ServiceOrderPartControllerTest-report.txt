@@ -1,0 +1,37 @@
+================================================================================
+RELATÓRIO DE TESTES
+================================================================================
+Classe: ServiceOrderPartControllerTest
+Gerado em: 15/11/2025 10:48:16
+--------------------------------------------------------------------------------
+RESUMO
+--------------------------------------------------------------------------------
+Total de Testes: 4
+Sucesso:         4
+Falhou:          0
+Abortado:        0
+Desabilitado:    0
+--------------------------------------------------------------------------------
+DETALHES DOS TESTES
+--------------------------------------------------------------------------------
+Método: shouldUpdateQuantity
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:48:16
+--------------------------------------------------------------------------------
+Método: shouldAddPartToOrder
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:48:16
+--------------------------------------------------------------------------------
+Método: shouldGetPartsByOrder
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:48:16
+--------------------------------------------------------------------------------
+Método: shouldRemovePartFromOrder
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 10:48:16
+--------------------------------------------------------------------------------
+
