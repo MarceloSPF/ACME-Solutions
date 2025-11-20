@@ -107,4 +107,10 @@ public class ServiceOrderController {
         List<ServiceOrderResponseDTO> orders = workshopFacade.getTechnicianServiceOrders(technicianId);
         return ResponseEntity.ok(orders);
     }
+    @PutMapping("/{id}")
+    public ResponseEntity<ServiceOrderResponseDTO> updateServiceOrder(
+            @PathVariable Long id, 
+            @Valid @RequestBody ServiceOrderRequestDTO requestDTO) {
+        return ResponseEntity.ok(workshopFacade.updateServiceOrder(id, requestDTO));
+    }
 }
