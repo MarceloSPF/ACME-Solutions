@@ -60,11 +60,11 @@ services:
       - SPRING_DATASOURCE_PASSWORD=acme_password
       - JAVA_TOOL_OPTIONS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: "wget -T5 -qO- http://localhost:8080/actuator/health | grep UP || exit 1"
       interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     networks:
       - acme-network
       - public-network

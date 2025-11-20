@@ -26,7 +26,7 @@ LABEL maintainer="ACME Solutions Team" \
       description="Backend service for ACME Solutions Workshop Management System"
 
 # Install curl for healthchecks
-RUN apk add --no-cache curl
+RUN apk --update --no-cache add curl
 
 # Create non-root user
 RUN addgroup -S appgroup && \
@@ -48,7 +48,7 @@ ENV SPRING_PROFILES_ACTIVE=prod \
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-    CMD curl -f http://localhost:8080/actuator/health || exit 1
+    CMD curl -f http://localhost:8080/api/actuator/health || exit 1
 
 # Expose only necessary port
 EXPOSE 8080
