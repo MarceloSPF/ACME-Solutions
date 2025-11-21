@@ -3,6 +3,7 @@ package com.acme.workshop.dto;
 import com.acme.workshop.model.ServiceOrder.ServiceStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List; // Importar List
 
 public class ServiceOrderResponseDTO {
     private Long id;
@@ -14,6 +15,10 @@ public class ServiceOrderResponseDTO {
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
     private BigDecimal totalCost;
+
+    // NOVOS CAMPOS DE RESPOSTA
+    private List<ServiceItemDTO> serviceItems;
+    private List<ServiceOrderPartDTO> parts;
 
     // Getters e Setters
     public Long getId() { return id; }
@@ -34,4 +39,11 @@ public class ServiceOrderResponseDTO {
     public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
     public BigDecimal getTotalCost() { return totalCost; }
     public void setTotalCost(BigDecimal totalCost) { this.totalCost = totalCost; }
+
+    // Getters/Setters das listas
+    public List<ServiceItemDTO> getServiceItems() { return serviceItems; }
+    public void setServiceItems(List<ServiceItemDTO> serviceItems) { this.serviceItems = serviceItems; }
+
+    public List<ServiceOrderPartDTO> getParts() { return parts; }
+    public void setParts(List<ServiceOrderPartDTO> parts) { this.parts = parts; }
 }

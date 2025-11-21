@@ -1,15 +1,9 @@
 package com.acme.workshop.facade;
 
-import com.acme.workshop.dto.ServiceOrderRequestDTO;
-import com.acme.workshop.dto.ServiceOrderResponseDTO;
-import com.acme.workshop.dto.VehicleDTO;
-import com.acme.workshop.dto.CustomerDTO;
-import com.acme.workshop.dto.TechnicianDTO;
+import com.acme.workshop.dto.*;
 import com.acme.workshop.model.*;
-import com.acme.workshop.service.CustomerService;
-import com.acme.workshop.service.TechnicianService;
-import com.acme.workshop.service.ServiceOrderService;
-import com.acme.workshop.service.VehicleService;
+import com.acme.workshop.repository.PartRepository;
+import com.acme.workshop.service.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,22 +17,29 @@ public class WorkshopFacade {
     private final TechnicianService technicianService;
     private final VehicleService vehicleService;
     private final ServiceOrderService serviceOrderService;
+    private final PartRepository partRepository;
+    private final WorkServiceService workServiceService;
 
     public WorkshopFacade(
             CustomerService customerService,
             TechnicianService technicianService,
             VehicleService vehicleService,
-            ServiceOrderService serviceOrderService) {
+            ServiceOrderService serviceOrderService,
+            PartRepository partRepository,
+            WorkServiceService workServiceService) {
         this.customerService = customerService;
         this.technicianService = technicianService;
         this.vehicleService = vehicleService;
         this.serviceOrderService = serviceOrderService;
+        this.partRepository = partRepository;
+        this.workServiceService = workServiceService;
     }
 
     // ==========================================
     // SERVICE ORDERS
     // ==========================================
 
+    @Transactional(readOnly = true)
     public List<ServiceOrderResponseDTO> getAllServiceOrders() {
         return serviceOrderService.findAll().stream()
             .map(this::convertToDTO)
@@ -49,14 +50,8 @@ public class WorkshopFacade {
     public ServiceOrderResponseDTO createServiceOrder(ServiceOrderRequestDTO requestDTO) {
         Customer customer = customerService.findById(requestDTO.getCustomerId())
             .orElseThrow(() -> new IllegalArgumentException("Cliente não encontrado"));
-
         Vehicle vehicle = vehicleService.findById(requestDTO.getVehicleId())
             .orElseThrow(() -> new IllegalArgumentException("Veículo não encontrado"));
-
-        if (!vehicle.getCustomer().getId().equals(customer.getId())) {
-            throw new IllegalArgumentException("Veículo não pertence ao cliente informado");
-        }
-
         Technician technician = technicianService.findById(requestDTO.getTechnicianId())
             .orElseThrow(() -> new IllegalArgumentException("Técnico não encontrado"));
 
@@ -65,201 +60,117 @@ public class WorkshopFacade {
             .withVehicle(vehicle)
             .withTechnician(technician)
             .withDescription(requestDTO.getDescription())
-            .withTotalCost(requestDTO.getTotalCost() != null ? requestDTO.getTotalCost() : java.math.BigDecimal.ZERO)
+            .withTotalCost(java.math.BigDecimal.ZERO)
             .build();
 
-        serviceOrder = serviceOrderService.save(serviceOrder);
-        return convertToDTO(serviceOrder);
+        // Salvar Itens
+        if (requestDTO.getServiceItems() != null) {
+            List<ServiceItem> items = requestDTO.getServiceItems().stream().map(itemDto -> {
+                ServiceItem item = new ServiceItem();
+                item.setDescription(itemDto.getDescription());
+                item.setLaborCost(itemDto.getLaborCost());
+                item.setQuantity(itemDto.getQuantity());
+                item.setServiceOrder(serviceOrder);
+                return item;
+            }).collect(Collectors.toList());
+            serviceOrder.setServiceItems(items);
+        }
+
+        // Salvar Peças
+        if (requestDTO.getParts() != null) {
+            List<ServiceOrderPart> parts = requestDTO.getParts().stream().map(partDto -> {
+                Part part = partRepository.findById(partDto.getPartId())
+                    .orElseThrow(() -> new IllegalArgumentException("Peça não encontrada ID: " + partDto.getPartId()));
+                
+                if (part.getStock() < partDto.getQuantity()) {
+                    throw new IllegalArgumentException("Estoque insuficiente: " + part.getName());
+                }
+                part.setStock(part.getStock() - partDto.getQuantity());
+                partRepository.save(part);
+
+                ServiceOrderPart orderPart = new ServiceOrderPart();
+                orderPart.setPart(part);
+                orderPart.setQuantity(partDto.getQuantity());
+                orderPart.setUnitPrice(part.getUnitPrice());
+                orderPart.setServiceOrder(serviceOrder);
+                return orderPart;
+            }).collect(Collectors.toList());
+            serviceOrder.setParts(parts);
+        }
+
+        serviceOrder.updateTotalCost();
+        ServiceOrder savedOrder = serviceOrderService.save(serviceOrder);
+        return convertToDTO(savedOrder);
     }
 
     @Transactional
     public ServiceOrderResponseDTO updateServiceOrder(Long id, ServiceOrderRequestDTO dto) {
         ServiceOrder order = serviceOrderService.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Ordem de serviço não encontrada"));
+            .orElseThrow(() -> new IllegalArgumentException("OS não encontrada"));
         
         order.setDescription(dto.getDescription());
-        order.setTotalCost(dto.getTotalCost());
         
         if (dto.getTechnicianId() != null) {
-            Technician tech = technicianService.findById(dto.getTechnicianId())
-                .orElseThrow(() -> new IllegalArgumentException("Técnico não encontrado"));
-            order.setTechnician(tech);
+            order.setTechnician(technicianService.findById(dto.getTechnicianId()).orElseThrow());
         }
 
-        // Nota: Geralmente não mudamos Cliente/Veículo numa edição simples de OS, 
-        // mas se necessário, adicione a lógica aqui.
+        if (dto.getStatus() != null && dto.getStatus() != order.getStatus()) {
+            order = serviceOrderService.updateStatus(order.getId(), dto.getStatus());
+        }
 
-        order = serviceOrderService.save(order);
-        return convertToDTO(order);
+        final ServiceOrder orderRef = order;
+
+        if (dto.getServiceItems() != null) {
+            order.getServiceItems().clear();
+            order.getServiceItems().addAll(dto.getServiceItems().stream().map(i -> {
+                ServiceItem item = new ServiceItem();
+                item.setDescription(i.getDescription());
+                item.setLaborCost(i.getLaborCost());
+                item.setQuantity(i.getQuantity());
+                item.setServiceOrder(orderRef);
+                return item;
+            }).collect(Collectors.toList()));
+        }
+
+        if (dto.getParts() != null) {
+            order.getParts().forEach(p -> {
+                p.getPart().setStock(p.getPart().getStock() + p.getQuantity());
+                partRepository.save(p.getPart());
+            });
+            order.getParts().clear();
+
+            order.getParts().addAll(dto.getParts().stream().map(pDto -> {
+                Part part = partRepository.findById(pDto.getPartId()).orElseThrow();
+                part.setStock(part.getStock() - pDto.getQuantity());
+                partRepository.save(part);
+
+                ServiceOrderPart sp = new ServiceOrderPart();
+                sp.setPart(part);
+                sp.setQuantity(pDto.getQuantity());
+                sp.setUnitPrice(part.getUnitPrice());
+                sp.setServiceOrder(orderRef);
+                return sp;
+            }).collect(Collectors.toList()));
+        }
+
+        order.updateTotalCost();
+        return convertToDTO(serviceOrderService.save(order));
     }
 
     @Transactional
     public ServiceOrderResponseDTO updateServiceOrderStatus(Long orderId, ServiceOrder.ServiceStatus newStatus) {
-        ServiceOrder updatedOrder = serviceOrderService.updateStatus(orderId, newStatus);
-        return convertToDTO(updatedOrder);
+        return convertToDTO(serviceOrderService.updateStatus(orderId, newStatus));
     }
 
     public List<ServiceOrderResponseDTO> getCustomerServiceOrders(Long customerId) {
-        return serviceOrderService.findByCustomerId(customerId).stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
+        return serviceOrderService.findByCustomerId(customerId).stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
     public List<ServiceOrderResponseDTO> getTechnicianServiceOrders(Long technicianId) {
-        return serviceOrderService.findByTechnicianId(technicianId).stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
+        return serviceOrderService.findByTechnicianId(technicianId).stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
-    // ==========================================
-    // VEHICLES
-    // ==========================================
-
-    public List<VehicleDTO> getAllVehicles() {
-        return vehicleService.findAll().stream()
-            .map(this::convertToVehicleDTO)
-            .collect(Collectors.toList());
-    }
-
-    public VehicleDTO getVehicle(Long id) {
-        Vehicle vehicle = vehicleService.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Veículo não encontrado"));
-        return convertToVehicleDTO(vehicle);
-    }
-
-    @Transactional
-    public VehicleDTO createVehicle(VehicleDTO vehicleDTO) {
-        Customer customer = customerService.findById(vehicleDTO.getCustomerId())
-            .orElseThrow(() -> new IllegalArgumentException("Cliente não encontrado"));
-        
-        Vehicle vehicle = new Vehicle();
-        vehicle.setBrand(vehicleDTO.getBrand());
-        vehicle.setModel(vehicleDTO.getModel());
-        vehicle.setModelYear(vehicleDTO.getModelYear());
-        vehicle.setLicensePlate(vehicleDTO.getLicensePlate());
-        vehicle.setCustomer(customer);
-
-        vehicle = vehicleService.save(vehicle);
-        return convertToVehicleDTO(vehicle);
-    }
-
-    @Transactional
-    public VehicleDTO updateVehicle(Long id, VehicleDTO vehicleDTO) {
-        Vehicle vehicle = vehicleService.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Veículo não encontrado"));
-        
-        vehicle.setBrand(vehicleDTO.getBrand());
-        vehicle.setModel(vehicleDTO.getModel());
-        vehicle.setModelYear(vehicleDTO.getModelYear());
-        vehicle.setLicensePlate(vehicleDTO.getLicensePlate());
-        
-        // Atualizar cliente se necessário
-        if (vehicleDTO.getCustomerId() != null && !vehicleDTO.getCustomerId().equals(vehicle.getCustomer().getId())) {
-             Customer customer = customerService.findById(vehicleDTO.getCustomerId())
-                .orElseThrow(() -> new IllegalArgumentException("Cliente não encontrado"));
-             vehicle.setCustomer(customer);
-        }
-
-        vehicle = vehicleService.save(vehicle);
-        return convertToVehicleDTO(vehicle);
-    }
-    
-    public void deleteVehicle(Long id) {
-        vehicleService.delete(id);
-    }
-
-    public List<VehicleDTO> getVehiclesByCustomer(Long customerId) {
-        return vehicleService.findByCustomerId(customerId).stream()
-            .map(this::convertToVehicleDTO)
-            .collect(Collectors.toList());
-    }
-
-    // ==========================================
-    // CUSTOMERS
-    // ==========================================
-
-    public List<CustomerDTO> getAllCustomers() {
-        return customerService.findAll().stream()
-            .map(this::convertToCustomerDTO)
-            .collect(Collectors.toList());
-    }
-
-    public CustomerDTO getCustomer(Long id) {
-        Customer customer = customerService.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Cliente não encontrado"));
-        return convertToCustomerDTO(customer);
-    }
-
-    @Transactional
-    public CustomerDTO createCustomer(CustomerDTO dto) {
-        Customer customer = new Customer();
-        updateCustomerEntityFromDTO(customer, dto);
-        customer = customerService.save(customer);
-        return convertToCustomerDTO(customer);
-    }
-
-    @Transactional
-    public CustomerDTO updateCustomer(Long id, CustomerDTO dto) {
-        Customer customer = customerService.update(id, convertToCustomerEntity(dto)); 
-        // Nota: O service update já lida com a lógica, mas idealmente passariamos os dados para o service atualizar
-        // Como o seu service espera uma Entity, convertemos o DTO para Entity aqui.
-        return convertToCustomerDTO(customer);
-    }
-
-    public void deleteCustomer(Long id) {
-        customerService.delete(id);
-    }
-    
-    public List<CustomerDTO> searchCustomers(String name) {
-        return customerService.searchByName(name).stream()
-            .map(this::convertToCustomerDTO)
-            .collect(Collectors.toList());
-    }
-
-    // ==========================================
-    // TECHNICIANS
-    // ==========================================
-
-    public List<TechnicianDTO> getAllTechnicians() {
-        return technicianService.findAll().stream()
-            .map(this::convertToTechnicianDTO)
-            .collect(Collectors.toList());
-    }
-
-    public TechnicianDTO getTechnician(Long id) {
-        Technician technician = technicianService.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Técnico não encontrado"));
-        return convertToTechnicianDTO(technician);
-    }
-
-    @Transactional
-    public TechnicianDTO createTechnician(TechnicianDTO dto) {
-        Technician technician = new Technician();
-        updateTechnicianEntityFromDTO(technician, dto);
-        technician = technicianService.save(technician);
-        return convertToTechnicianDTO(technician);
-    }
-
-    @Transactional
-    public TechnicianDTO updateTechnician(Long id, TechnicianDTO dto) {
-        Technician technician = technicianService.update(id, convertToTechnicianEntity(dto));
-        return convertToTechnicianDTO(technician);
-    }
-
-    public void deleteTechnician(Long id) {
-        technicianService.delete(id);
-    }
-    
-    public List<TechnicianDTO> searchTechnicians(String specialization) {
-        return technicianService.findBySpecialization(specialization).stream()
-            .map(this::convertToTechnicianDTO)
-            .collect(Collectors.toList());
-    }
-
-    // ==========================================
-    // PRIVATE CONVERTERS
-    // ==========================================
-
+    // --- CONVERSOR PRINCIPAL ---
     private ServiceOrderResponseDTO convertToDTO(ServiceOrder serviceOrder) {
         ServiceOrderResponseDTO dto = new ServiceOrderResponseDTO();
         dto.setId(serviceOrder.getId());
@@ -269,18 +180,44 @@ public class WorkshopFacade {
         dto.setCompletedAt(serviceOrder.getCompletedAt());
         dto.setTotalCost(serviceOrder.getTotalCost());
 
-        // Convert customer
         dto.setCustomer(convertToCustomerDTO(serviceOrder.getCustomer()));
-
-        // Convert vehicle
         dto.setVehicle(convertToVehicleDTO(serviceOrder.getVehicle()));
-
-        // Convert technician
         dto.setTechnician(convertToTechnicianDTO(serviceOrder.getTechnician()));
 
+        // Converter Listas de Serviços (CORRIGIDO PARA INCLUIR ID E LISTA)
+        if (serviceOrder.getServiceItems() != null) {
+            dto.setServiceItems(serviceOrder.getServiceItems().stream().map(item -> {
+                ServiceItemDTO iDto = new ServiceItemDTO();
+                iDto.setId(item.getId());
+                iDto.setServiceOrderId(serviceOrder.getId()); // ID da OS
+                iDto.setDescription(item.getDescription());
+                iDto.setLaborCost(item.getLaborCost());
+                iDto.setQuantity(item.getQuantity());
+                iDto.setTotalCost(item.getTotalCost());
+                return iDto;
+            }).collect(Collectors.toList()));
+        }
+
+        // Converter Listas de Peças (CORRIGIDO PARA INCLUIR ID E LISTA)
+        if (serviceOrder.getParts() != null) {
+            dto.setParts(serviceOrder.getParts().stream().map(part -> {
+                ServiceOrderPartDTO pDto = new ServiceOrderPartDTO();
+                pDto.setId(part.getId());
+                pDto.setServiceOrderId(serviceOrder.getId()); // ID da OS
+                pDto.setPartId(part.getPart().getId());
+                pDto.setPartName(part.getPart().getName());
+                pDto.setPartCode(part.getPart().getCode());
+                pDto.setQuantity(part.getQuantity());
+                pDto.setUnitPrice(part.getUnitPrice());
+                pDto.setTotalCost(part.getTotalCost());
+                return pDto;
+            }).collect(Collectors.toList()));
+        }
         return dto;
     }
 
+    // ... (Mantidos os outros métodos auxiliares: WorkService, CRUDs, etc) ...
+    
     private VehicleDTO convertToVehicleDTO(Vehicle vehicle) {
         VehicleDTO dto = new VehicleDTO();
         dto.setId(vehicle.getId());
@@ -290,51 +227,60 @@ public class WorkshopFacade {
         dto.setLicensePlate(vehicle.getLicensePlate());
         if (vehicle.getCustomer() != null) {
             dto.setCustomerId(vehicle.getCustomer().getId());
+            dto.setCustomerName(vehicle.getCustomer().getName());
         }
         return dto;
     }
-
     private CustomerDTO convertToCustomerDTO(Customer customer) {
         CustomerDTO dto = new CustomerDTO();
-        dto.setId(customer.getId());
-        dto.setName(customer.getName());
-        dto.setEmail(customer.getEmail());
-        dto.setPhone(customer.getPhone());
-        dto.setAddress(customer.getAddress());
+        dto.setId(customer.getId()); dto.setName(customer.getName()); dto.setEmail(customer.getEmail()); dto.setPhone(customer.getPhone()); dto.setAddress(customer.getAddress());
         return dto;
     }
-
-    private Customer convertToCustomerEntity(CustomerDTO dto) {
-        Customer customer = new Customer();
-        updateCustomerEntityFromDTO(customer, dto);
-        return customer;
-    }
-
-    private void updateCustomerEntityFromDTO(Customer customer, CustomerDTO dto) {
-        customer.setName(dto.getName());
-        customer.setEmail(dto.getEmail());
-        customer.setPhone(dto.getPhone());
-        customer.setAddress(dto.getAddress());
-    }
-
     private TechnicianDTO convertToTechnicianDTO(Technician technician) {
         TechnicianDTO dto = new TechnicianDTO();
-        dto.setId(technician.getId());
-        dto.setName(technician.getName());
-        dto.setEmail(technician.getEmail());
-        dto.setSpecialization(technician.getSpecialization());
+        dto.setId(technician.getId()); dto.setName(technician.getName()); dto.setEmail(technician.getEmail()); dto.setSpecialization(technician.getSpecialization());
         return dto;
     }
-
-    private Technician convertToTechnicianEntity(TechnicianDTO dto) {
-        Technician technician = new Technician();
-        updateTechnicianEntityFromDTO(technician, dto);
-        return technician;
+    
+    public List<WorkServiceDTO> getAllWorkServices() { return workServiceService.findAll().stream().map(this::convertToWorkServiceDTO).collect(Collectors.toList()); }
+    public WorkServiceDTO createWorkService(WorkServiceDTO dto) {
+        WorkService entity = new WorkService(); entity.setDescription(dto.getDescription()); entity.setStandardPrice(dto.getStandardPrice());
+        return convertToWorkServiceDTO(workServiceService.save(entity));
     }
-
-    private void updateTechnicianEntityFromDTO(Technician technician, TechnicianDTO dto) {
-        technician.setName(dto.getName());
-        technician.setEmail(dto.getEmail());
-        technician.setSpecialization(dto.getSpecialization());
+    public WorkServiceDTO updateWorkService(Long id, WorkServiceDTO dto) {
+        WorkService entity = new WorkService(); entity.setDescription(dto.getDescription()); entity.setStandardPrice(dto.getStandardPrice());
+        return convertToWorkServiceDTO(workServiceService.update(id, entity));
     }
+    public void deleteWorkService(Long id) { workServiceService.delete(id); }
+    private WorkServiceDTO convertToWorkServiceDTO(WorkService s) {
+        WorkServiceDTO dto = new WorkServiceDTO(); dto.setId(s.getId()); dto.setDescription(s.getDescription()); dto.setStandardPrice(s.getStandardPrice()); return dto;
+    }
+    
+    public List<CustomerDTO> getAllCustomers() { return customerService.findAll().stream().map(this::convertToCustomerDTO).collect(Collectors.toList()); }
+    public CustomerDTO getCustomer(Long id) { return convertToCustomerDTO(customerService.findById(id).orElseThrow()); }
+    @Transactional public CustomerDTO createCustomer(CustomerDTO dto) { Customer c = new Customer(); c.setName(dto.getName()); c.setEmail(dto.getEmail()); c.setPhone(dto.getPhone()); c.setAddress(dto.getAddress()); return convertToCustomerDTO(customerService.save(c)); }
+    @Transactional public CustomerDTO updateCustomer(Long id, CustomerDTO dto) { Customer c = new Customer(); c.setName(dto.getName()); c.setEmail(dto.getEmail()); c.setPhone(dto.getPhone()); c.setAddress(dto.getAddress()); return convertToCustomerDTO(customerService.update(id, c)); }
+    public void deleteCustomer(Long id) { customerService.delete(id); }
+    public List<CustomerDTO> searchCustomers(String s) { return customerService.searchByName(s).stream().map(this::convertToCustomerDTO).collect(Collectors.toList()); }
+
+    public List<VehicleDTO> getAllVehicles() { return vehicleService.findAll().stream().map(this::convertToVehicleDTO).collect(Collectors.toList()); }
+    public VehicleDTO getVehicle(Long id) { return convertToVehicleDTO(vehicleService.findById(id).orElseThrow()); }
+    @Transactional public VehicleDTO createVehicle(VehicleDTO dto) { 
+        Vehicle v = new Vehicle(); v.setBrand(dto.getBrand()); v.setModel(dto.getModel()); v.setModelYear(dto.getModelYear()); v.setLicensePlate(dto.getLicensePlate());
+        v.setCustomer(customerService.findById(dto.getCustomerId()).orElseThrow());
+        return convertToVehicleDTO(vehicleService.save(v)); 
+    }
+    @Transactional public VehicleDTO updateVehicle(Long id, VehicleDTO dto) {
+        Vehicle v = vehicleService.findById(id).orElseThrow(); v.setBrand(dto.getBrand()); v.setModel(dto.getModel()); v.setModelYear(dto.getModelYear()); v.setLicensePlate(dto.getLicensePlate());
+        return convertToVehicleDTO(vehicleService.save(v));
+    }
+    public void deleteVehicle(Long id) { vehicleService.delete(id); }
+    public List<VehicleDTO> getVehiclesByCustomer(Long id) { return vehicleService.findByCustomerId(id).stream().map(this::convertToVehicleDTO).collect(Collectors.toList()); }
+
+    public List<TechnicianDTO> getAllTechnicians() { return technicianService.findAll().stream().map(this::convertToTechnicianDTO).collect(Collectors.toList()); }
+    public TechnicianDTO getTechnician(Long id) { return convertToTechnicianDTO(technicianService.findById(id).orElseThrow()); }
+    @Transactional public TechnicianDTO createTechnician(TechnicianDTO dto) { Technician t = new Technician(); t.setName(dto.getName()); t.setEmail(dto.getEmail()); t.setSpecialization(dto.getSpecialization()); return convertToTechnicianDTO(technicianService.save(t)); }
+    @Transactional public TechnicianDTO updateTechnician(Long id, TechnicianDTO dto) { Technician t = new Technician(); t.setName(dto.getName()); t.setEmail(dto.getEmail()); t.setSpecialization(dto.getSpecialization()); return convertToTechnicianDTO(technicianService.update(id, t)); }
+    public void deleteTechnician(Long id) { technicianService.delete(id); }
+    public List<TechnicianDTO> searchTechnicians(String s) { return technicianService.findBySpecialization(s).stream().map(this::convertToTechnicianDTO).collect(Collectors.toList()); }
 }
