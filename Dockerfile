@@ -1,4 +1,4 @@
-# Build stage with caching optimization
+# Build stage
 FROM eclipse-temurin:17-jdk-alpine AS builder
 
 WORKDIR /workspace/app
@@ -8,17 +8,16 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Download dependencies
-RUN chmod +x ./mvnw && \
-    ./mvnw dependency:go-offline -B
+# Dá permissão de execução ao wrapper
+RUN chmod +x ./mvnw
 
 # Copy source code
 COPY src src
 
-# Build the application
+# Build the application (o Maven vai baixar as dependências aqui automaticamente)
 RUN ./mvnw clean package -DskipTests
 
-# Runtime stage with security hardening
+# Runtime stage
 FROM eclipse-temurin:17-jre-alpine AS runtime
 
 LABEL maintainer="ACME Solutions Team" \

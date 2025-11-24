@@ -9,6 +9,7 @@ public class VehicleDTO implements Serializable {
     private Integer modelYear;
     private String licensePlate;
     private Long customerId;
+    private String customerName;
 
     // Getters e Setters
     public Long getId() { return id; }
@@ -28,4 +29,7 @@ public class VehicleDTO implements Serializable {
     
     public Long getCustomerId() { return customerId; }
     public void setCustomerId(Long customerId) { this.customerId = customerId; }
+
+    public String getCustomerName() { return customerName; }
+    public void setCustomerName(String customerName) { this.customerName = customerName; }
 }

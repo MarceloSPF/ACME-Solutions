@@ -1,0 +1,42 @@
+================================================================================
+RELATÓRIO DE TESTES
+================================================================================
+Classe: ServiceItemControllerTest
+Gerado em: 15/11/2025 14:46:47
+--------------------------------------------------------------------------------
+RESUMO
+--------------------------------------------------------------------------------
+Total de Testes: 5
+Sucesso:         5
+Falhou:          0
+Abortado:        0
+Desabilitado:    0
+--------------------------------------------------------------------------------
+DETALHES DOS TESTES
+--------------------------------------------------------------------------------
+Método: shouldGetServiceItemsByOrder
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:46:47
+--------------------------------------------------------------------------------
+Método: shouldUpdateServiceItem
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:46:47
+--------------------------------------------------------------------------------
+Método: shouldDeleteServiceItem
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:46:47
+--------------------------------------------------------------------------------
+Método: shouldGetServiceItemById
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:46:47
+--------------------------------------------------------------------------------
+Método: shouldCreateServiceItem
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:46:47
+--------------------------------------------------------------------------------
+

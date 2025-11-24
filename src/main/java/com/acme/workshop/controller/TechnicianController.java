@@ -3,6 +3,8 @@ package com.acme.workshop.controller;
 import com.acme.workshop.dto.TechnicianDTO;
 import com.acme.workshop.model.Technician;
 import com.acme.workshop.service.TechnicianService;
+import com.acme.workshop.facade.WorkshopFacade;
+import com.acme.workshop.dto.TechnicianSelectDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +19,11 @@ import java.util.stream.Collectors;
 public class TechnicianController {
     
     private final TechnicianService technicianService;
+    private final WorkshopFacade workshopFacade;
 
-    public TechnicianController(TechnicianService technicianService) {
+    public TechnicianController(TechnicianService technicianService, WorkshopFacade workshopFacade) {
         this.technicianService = technicianService;
+        this.workshopFacade = workshopFacade;
     }
 
     @PostMapping
@@ -91,4 +95,9 @@ public class TechnicianController {
         technician.setSpecialization(dto.getSpecialization());
         return technician;
     }
+    @GetMapping("/select") // Endpoint: /api/customers/select
+        public ResponseEntity<List<TechnicianSelectDTO>> getCustomersForDropdown() {
+            return ResponseEntity.ok(workshopFacade.getTechniciansForSelect());
+    }
+
 }

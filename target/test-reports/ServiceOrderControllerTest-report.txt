@@ -1,0 +1,42 @@
+================================================================================
+RELATÓRIO DE TESTES
+================================================================================
+Classe: ServiceOrderControllerTest
+Gerado em: 15/11/2025 14:47:29
+--------------------------------------------------------------------------------
+RESUMO
+--------------------------------------------------------------------------------
+Total de Testes: 5
+Sucesso:         5
+Falhou:          0
+Abortado:        0
+Desabilitado:    0
+--------------------------------------------------------------------------------
+DETALHES DOS TESTES
+--------------------------------------------------------------------------------
+Método: shouldUpdateServiceOrderStatus
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:47:29
+--------------------------------------------------------------------------------
+Método: shouldGetServiceOrdersByCustomer
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:47:29
+--------------------------------------------------------------------------------
+Método: shouldGetServiceOrdersByTechnician
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:47:29
+--------------------------------------------------------------------------------
+Método: shouldCreateServiceOrder
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:47:29
+--------------------------------------------------------------------------------
+Método: shouldGetAllServiceOrders
+Status: SUCCESS
+Mensagem: Teste executado com sucesso
+Data/Hora: 15/11/2025 14:47:29
+--------------------------------------------------------------------------------
+
