@@ -20,9 +20,13 @@ public class ServiceOrderService {
     private final List<ServiceOrderObserver> observers = new ArrayList<>();
 
     @Autowired
-    public ServiceOrderService(ServiceOrderRepository serviceOrderRepository) {
+    public ServiceOrderService(ServiceOrderRepository serviceOrderRepository,
+                               List<ServiceOrderObserver> observers) { // <--- CORREÇÃO AQUI
         this.serviceOrderRepository = serviceOrderRepository;
+        this.observers.addAll(observers); // O Spring injeta e nós adicionamos à lista
     }
+
+    // ... (O resto do arquivo permanece IGUAL) ...
 
     public void addObserver(ServiceOrderObserver observer) {
         observers.add(observer);
@@ -37,6 +41,7 @@ public class ServiceOrderService {
     }
 
     private void notifyObservers(ServiceOrder serviceOrder, ServiceOrder.ServiceStatus oldStatus) {
+        // Agora esta lista terá o EmailNotificationObserver dentro!
         observers.forEach(observer -> observer.onServiceOrderStatusChange(serviceOrder, oldStatus));
     }
 
@@ -47,7 +52,7 @@ public class ServiceOrderService {
             .withVehicle(vehicle)
             .withTechnician(technician)
             .withDescription(description)
-            .withTotalCost(java.math.BigDecimal.ZERO) // Será atualizado posteriormente
+            .withTotalCost(java.math.BigDecimal.ZERO)
             .build();
 
         return serviceOrderRepository.save(serviceOrder);
@@ -66,7 +71,7 @@ public class ServiceOrderService {
 
         serviceOrder = serviceOrderRepository.save(serviceOrder);
         
-        // Notifica os observers sobre a mudança de status
+        // Dispara a notificação
         notifyObservers(serviceOrder, oldStatus);
         
         return serviceOrder;
@@ -98,5 +103,17 @@ public class ServiceOrderService {
 
         serviceOrder.setTotalCost(totalCost);
         return serviceOrderRepository.save(serviceOrder);
+    }
+
+    public ServiceOrder recalculateTotalCost(Long id) {
+        ServiceOrder serviceOrder = serviceOrderRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Ordem de serviço não encontrada"));
+
+        serviceOrder.updateTotalCost();
+        return serviceOrderRepository.save(serviceOrder);
+    }
+
+    public void deleteById(Long id) {
+        serviceOrderRepository.deleteById(id);
     }
 }

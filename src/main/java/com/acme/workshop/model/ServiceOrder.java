@@ -3,6 +3,8 @@ package com.acme.workshop.model;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "service_orders")
@@ -38,6 +40,38 @@ public class ServiceOrder {
 
     @Column(nullable = false)
     private BigDecimal totalCost;
+
+    @OneToMany(mappedBy = "serviceOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ServiceItem> serviceItems = new ArrayList<>();
+
+    @OneToMany(mappedBy = "serviceOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ServiceOrderPart> parts = new ArrayList<>();
+
+    // Calcula o custo total automaticamente baseado em itens e peças
+    public BigDecimal calculateTotalCost() {
+        BigDecimal total = BigDecimal.ZERO;
+
+        // Soma custos dos itens de serviço
+        if (serviceItems != null) {
+            for (ServiceItem item : serviceItems) {
+                total = total.add(item.getTotalCost());
+            }
+        }
+
+        // Soma custos das peças
+        if (parts != null) {
+            for (ServiceOrderPart orderPart : parts) {
+                total = total.add(orderPart.getTotalCost());
+            }
+        }
+
+        return total;
+    }
+
+    // Atualiza o totalCost calculando automaticamente
+    public void updateTotalCost() {
+        this.totalCost = calculateTotalCost();
+    }
 
     public enum ServiceStatus {
         PENDING,
@@ -117,5 +151,21 @@ public class ServiceOrder {
 
     public void setTotalCost(BigDecimal totalCost) {
         this.totalCost = totalCost;
+    }
+
+    public List<ServiceItem> getServiceItems() {
+        return serviceItems;
+    }
+
+    public void setServiceItems(List<ServiceItem> serviceItems) {
+        this.serviceItems = serviceItems;
+    }
+
+    public List<ServiceOrderPart> getParts() {
+        return parts;
+    }
+
+    public void setParts(List<ServiceOrderPart> parts) {
+        this.parts = parts;
     }
 }
