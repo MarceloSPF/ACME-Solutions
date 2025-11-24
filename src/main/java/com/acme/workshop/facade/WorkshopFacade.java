@@ -283,4 +283,43 @@ public class WorkshopFacade {
     @Transactional public TechnicianDTO updateTechnician(Long id, TechnicianDTO dto) { Technician t = new Technician(); t.setName(dto.getName()); t.setEmail(dto.getEmail()); t.setSpecialization(dto.getSpecialization()); return convertToTechnicianDTO(technicianService.update(id, t)); }
     public void deleteTechnician(Long id) { technicianService.delete(id); }
     public List<TechnicianDTO> searchTechnicians(String s) { return technicianService.findBySpecialization(s).stream().map(this::convertToTechnicianDTO).collect(Collectors.toList()); }
+    @Transactional(readOnly = true)
+    public List<ServiceOrderSummaryDTO> getServiceOrderSummaries() {
+        return serviceOrderService.findAll().stream()
+            .map(order -> new ServiceOrderSummaryDTO(
+                order.getId(),
+                order.getCustomer().getName(),
+                order.getVehicle().getBrand() + " " + order.getVehicle().getModel() + " (" + order.getVehicle().getLicensePlate() + ")",
+                order.getTechnician().getName(),
+                order.getStatus(),
+                order.getCreatedAt(),
+                order.getTotalCost()
+            ))
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public ServiceOrderResponseDTO getServiceOrderById(Long id) {
+        ServiceOrder order = serviceOrderService.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Ordem de serviço não encontrada"));
+        return convertToDTO(order);
+    }
+
+    public List<CustomerSelectDTO> getCustomersForSelect() {
+        return customerService.findAll().stream()
+            .map(c -> new CustomerSelectDTO(c.getId(), c.getName()))
+            .collect(Collectors.toList());
+    }
+
+    public List<VehicleSelectDTO> getVehiclesForSelect() {
+        return vehicleService.findAll().stream()
+            .map(v -> new VehicleSelectDTO(v.getId(), v.getBrand(), v.getModel(), v.getLicensePlate(), v.getId()))
+            .collect(Collectors.toList());
+    }
+
+    public List<TechnicianSelectDTO> getTechniciansForSelect() {
+        return technicianService.findAll().stream()
+            .map(t -> new TechnicianSelectDTO(t.getId(), t.getName()))
+            .collect(Collectors.toList());
+    }
 }

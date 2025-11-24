@@ -1,6 +1,7 @@
 package com.acme.workshop.controller;
 
 import com.acme.workshop.dto.VehicleDTO;
+import com.acme.workshop.dto.VehicleSelectDTO;
 import com.acme.workshop.facade.WorkshopFacade;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -42,5 +43,15 @@ public class VehicleController {
     public ResponseEntity<VehicleDTO> updateVehicle(@PathVariable Long id, @RequestBody VehicleDTO vehicleDTO) {
         // Lembre-se de adicionar o método updateVehicle no WorkshopFacade também
         return ResponseEntity.ok(workshopFacade.updateVehicle(id, vehicleDTO));
+    }
+    @GetMapping("/select") // Endpoint: /api/customers/select
+    public ResponseEntity<List<VehicleSelectDTO>> getVehiclesForDropdown() {
+        return ResponseEntity.ok(workshopFacade.getVehiclesForSelect());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteVehicle(@PathVariable Long id) {
+        workshopFacade.deleteVehicle(id);
+        return ResponseEntity.noContent().build();
     }
 }

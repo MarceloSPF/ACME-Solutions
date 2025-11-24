@@ -1,6 +1,8 @@
 package com.acme.workshop.controller;
 
 import com.acme.workshop.dto.CustomerDTO;
+import com.acme.workshop.dto.CustomerSelectDTO;
+import com.acme.workshop.facade.WorkshopFacade;
 import com.acme.workshop.model.Customer;
 import com.acme.workshop.service.CustomerService;
 import jakarta.validation.Valid;
@@ -16,9 +18,12 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/customers")
 public class CustomerController {
     
+    private final WorkshopFacade workshopFacade;
+
     private final CustomerService customerService;
 
-    public CustomerController(CustomerService customerService) {
+    public CustomerController(WorkshopFacade workshopFacade, CustomerService customerService) {
+        this.workshopFacade = workshopFacade;
         this.customerService = customerService;
     }
 
@@ -92,5 +97,9 @@ public class CustomerController {
         customer.setPhone(dto.getPhone());
         customer.setAddress(dto.getAddress());
         return customer;
+    }
+    @GetMapping("/select") // Endpoint: /api/customers/select
+    public ResponseEntity<List<CustomerSelectDTO>> getCustomersForDropdown() {
+        return ResponseEntity.ok(workshopFacade.getCustomersForSelect());
     }
 }

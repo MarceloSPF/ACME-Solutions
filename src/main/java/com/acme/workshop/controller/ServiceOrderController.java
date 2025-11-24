@@ -11,7 +11,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/service-orders")
@@ -26,52 +25,11 @@ public class ServiceOrderController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ServiceOrderResponseDTO>> getAllServiceOrders() {
-        List<ServiceOrder> serviceOrders = serviceOrderService.findAll();
-        List<ServiceOrderResponseDTO> dtos = serviceOrders.stream()
-            .map(order -> {
-                ServiceOrderResponseDTO dto = new ServiceOrderResponseDTO();
-                dto.setId(order.getId());
-                dto.setDescription(order.getDescription());
-                dto.setStatus(order.getStatus());
-                dto.setCreatedAt(order.getCreatedAt());
-                dto.setCompletedAt(order.getCompletedAt());
-                dto.setTotalCost(order.getTotalCost());
-
-                // Customer DTO
-                CustomerDTO customerDTO = new CustomerDTO();
-                customerDTO.setId(order.getCustomer().getId());
-                customerDTO.setName(order.getCustomer().getName());
-                customerDTO.setEmail(order.getCustomer().getEmail());
-                customerDTO.setPhone(order.getCustomer().getPhone());
-                customerDTO.setAddress(order.getCustomer().getAddress());
-                dto.setCustomer(customerDTO);
-
-                // Vehicle DTO
-                VehicleDTO vehicleDTO = new VehicleDTO();
-                vehicleDTO.setId(order.getVehicle().getId());
-                vehicleDTO.setBrand(order.getVehicle().getBrand());
-                vehicleDTO.setModel(order.getVehicle().getModel());
-                vehicleDTO.setModelYear(order.getVehicle().getModelYear());
-                vehicleDTO.setLicensePlate(order.getVehicle().getLicensePlate());
-                vehicleDTO.setCustomerId(order.getVehicle().getCustomer().getId());
-                dto.setVehicle(vehicleDTO);
-
-                // Technician DTO
-                TechnicianDTO technicianDTO = new TechnicianDTO();
-                technicianDTO.setId(order.getTechnician().getId());
-                technicianDTO.setName(order.getTechnician().getName());
-                technicianDTO.setEmail(order.getTechnician().getEmail());
-                technicianDTO.setSpecialization(order.getTechnician().getSpecialization());
-                dto.setTechnician(technicianDTO);
-
-                return dto;
-            })
-            .collect(Collectors.toList());
-
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<List<ServiceOrderSummaryDTO>> getAllServiceOrders() {
+        return ResponseEntity.ok(workshopFacade.getServiceOrderSummaries());
     }
 
+    // --- O MÉTODO QUE FALTAVA (POST) ---
     @PostMapping
     public ResponseEntity<ServiceOrderResponseDTO> createServiceOrder(
             @Valid @RequestBody ServiceOrderRequestDTO requestDTO) {
@@ -85,6 +43,7 @@ public class ServiceOrderController {
 
         return ResponseEntity.created(location).body(responseDTO);
     }
+    // -----------------------------------
 
     @PutMapping("/{id}/status")
     public ResponseEntity<ServiceOrderResponseDTO> updateServiceOrderStatus(
@@ -107,10 +66,22 @@ public class ServiceOrderController {
         List<ServiceOrderResponseDTO> orders = workshopFacade.getTechnicianServiceOrders(technicianId);
         return ResponseEntity.ok(orders);
     }
+
     @PutMapping("/{id}")
     public ResponseEntity<ServiceOrderResponseDTO> updateServiceOrder(
             @PathVariable Long id, 
             @Valid @RequestBody ServiceOrderRequestDTO requestDTO) {
         return ResponseEntity.ok(workshopFacade.updateServiceOrder(id, requestDTO));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ServiceOrderResponseDTO> getServiceOrderById(@PathVariable Long id) {
+        return ResponseEntity.ok(workshopFacade.getServiceOrderById(id));
+    }
+    
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteServiceOrder(@PathVariable Long id) {
+        serviceOrderService.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
